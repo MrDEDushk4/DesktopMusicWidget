@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<EnableDefaultApplicationDefinition>true</EnableDefaultApplicationDefinition>
+		<StartupObject>DesktopMusicWidget.App</StartupObject>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Images\back.png" />
+	  <None Remove="Images\next.png" />
+	  <None Remove="Images\flip.png" />
+	  <None Remove="Images\loop.png" />
+	  <None Remove="Images\pause.png" />
+	  <None Remove="Images\play.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="TagLibSharp" Version="2.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Images\back.png" />
+	  <Resource Include="Images\next.png" />
+	  <Resource Include="Images\flip.png" />
+	  <Resource Include="Images\loop.png" />
+	  <Resource Include="Images\pause.png" />
+	  <Resource Include="Images\play.png" />
+	</ItemGroup>
+
+</Project>

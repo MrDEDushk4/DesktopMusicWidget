@@ -1,0 +1,586 @@
+<Window x:Class="DesktopMusicWidget.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Desktop Music Widget"
+        Width="300"
+        Height="283"
+        MinWidth="300"
+        MinHeight="405"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        FontFamily="Inter"
+        Loaded="Window_Loaded"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.Resources>
+
+        <!-- Rounded progress and volume sliders (thumb appears on hover / drag) -->
+        <Style x:Key="RoundedSlider" TargetType="{x:Type Slider}">
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Foreground" Value="#A7A7A7"/>
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Focusable" Value="True"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <!-- Transparent background makes the whole 18px height hoverable -->
+                        <Grid Height="18"
+                              VerticalAlignment="Center"
+                              Background="Transparent">
+
+                            <Border Height="5"
+                                    Margin="6,0"
+                                    CornerRadius="3"
+                                    Background="#1E1E1E"
+                                    VerticalAlignment="Center"/>
+
+                            <Track x:Name="PART_Track"
+                                   Margin="0,0"
+                                   VerticalAlignment="Center"
+                                   IsDirectionReversed="False">
+
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton
+                                        Command="{x:Static Slider.DecreaseLarge}"
+                                        IsTabStop="False"
+                                        Focusable="False"
+                                        Background="Transparent"
+                                        BorderThickness="0">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="{x:Type RepeatButton}">
+                                                <Border Height="5"
+                                                        Margin="6,0,-6,0"
+                                                        CornerRadius="3"
+                                                        Background="#A7A7A7"
+                                                        VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+
+                                <Track.Thumb>
+                                    <Thumb x:Name="SliderThumb"
+                                           Width="12"
+                                           Height="12"
+                                           Opacity="0"
+                                           Cursor="Hand"
+                                           Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                                <Ellipse Fill="#FFFFFF"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton
+                                        Command="{x:Static Slider.IncreaseLarge}"
+                                        IsTabStop="False"
+                                        Focusable="False"
+                                        Background="Transparent"
+                                        BorderThickness="0">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="{x:Type RepeatButton}">
+                                                <Border Height="5"
+                                                        CornerRadius="3"
+                                                        Background="Transparent"
+                                                        VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+
+                            </Track>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SliderThumb"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.16"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SliderThumb"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0:0:0.22"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+
+                            <Trigger SourceName="SliderThumb"
+                                     Property="IsDragging"
+                                     Value="True">
+                                <Setter TargetName="SliderThumb" Property="Opacity" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Transparent playback buttons -->
+        <Style x:Key="TransportButton" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#A7A7A7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="Transparent"
+                                CornerRadius="8">
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.75"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small round "X" button for removing a track from the playlist -->
+        <Style x:Key="DeleteTrackButton" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bg"
+                                CornerRadius="10"
+                                Background="#55FFFFFF">
+                            <Path Data="M 0,0 L 8,8 M 8,0 L 0,8"
+                                  Stroke="#FFFFFF"
+                                  StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg"
+                                        Property="Background"
+                                        Value="#E5484D"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg"
+                                        Property="Background"
+                                        Value="#B93A3E"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Playlist rows (no inner padding: the card fills the whole row) -->
+        <Style TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="BorderThickness" Value="0"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="Row"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row"
+                                        Property="Background"
+                                        Value="#333333"/>
+                            </Trigger>
+
+                            <!-- Declared after IsMouseOver so it wins -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row"
+                                        Property="Background"
+                                        Value="#383838"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <!-- Main widget -->
+    <Border Background="#303030"
+            CornerRadius="16"
+            Margin="7"
+            Padding="13">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- PLAYLIST -->
+            <Border Grid.Row="0"
+                    Background="#292929"
+                    CornerRadius="10"
+                    Padding="7"
+                    Margin="0,0,0,7"
+                    AllowDrop="True"
+                    DragOver="Playlist_DragOver"
+                    Drop="Playlist_Drop">
+
+                <ListBox x:Name="PlaylistList"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0"
+                         AllowDrop="True"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="False"
+                         VirtualizingPanel.ScrollUnit="Pixel"
+                         SelectionChanged="PlaylistList_SelectionChanged"
+                         PreviewMouseWheel="PlaylistList_PreviewMouseWheel">
+
+                    <!-- Slim rounded scrollbar matching the reference image -->
+                    <ListBox.Resources>
+                        <Style TargetType="{x:Type ScrollBar}">
+                            <Setter Property="Width" Value="8"/>
+                            <Setter Property="MinWidth" Value="8"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                        <Grid Background="Transparent" Width="8">
+                                            <Track x:Name="PART_Track"
+                                                   IsDirectionReversed="True"
+                                                   Orientation="Vertical">
+                                                <Track.DecreaseRepeatButton>
+                                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                                                  IsTabStop="False" Focusable="False"
+                                                                  Background="Transparent" BorderThickness="0"/>
+                                                </Track.DecreaseRepeatButton>
+                                                <Track.Thumb>
+                                                    <Thumb MinHeight="24" Cursor="Hand">
+                                                        <Thumb.Template>
+                                                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                                                <Border Width="4" HorizontalAlignment="Center"
+                                                                        CornerRadius="2" Background="#E6E6E6"/>
+                                                            </ControlTemplate>
+                                                        </Thumb.Template>
+                                                    </Thumb>
+                                                </Track.Thumb>
+                                                <Track.IncreaseRepeatButton>
+                                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                                                  IsTabStop="False" Focusable="False"
+                                                                  Background="Transparent" BorderThickness="0"/>
+                                                </Track.IncreaseRepeatButton>
+                                            </Track>
+                                        </Grid>
+                                    </ControlTemplate>
+                            </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.Resources>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Same total height as before (68 content + 4 + 4 padding) -->
+                            <Grid x:Name="CardRoot"
+                                  Height="52"
+                                  Background="Transparent">
+                                    <Grid ClipToBounds="True">
+
+                                <!-- Playing-track background: fills the whole card,
+                                     clipped to the same rounded corners as the row -->
+                                <Grid IsHitTestVisible="False">
+                                    <Grid.Style>
+                                        <Style TargetType="{x:Type Grid}">
+                                            <!-- Keep the background in the visual tree so opacity animations work. -->
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Setter Property="Opacity" Value="0"/>
+
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPlaying}"
+                                                             Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                 From="0" To="1"
+                                                                                 Duration="0:0:0.28"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                 To="0"
+                                                                                 Duration="0:0:0.22"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+
+                                    <!-- Album artwork is painted directly into a rounded Border.
+                                         ImageBrush is clipped by the Border geometry, avoiding mask artifacts. -->
+                                    <Border CornerRadius="7" ClipToBounds="True">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding AlbumArt}"
+                                                        Stretch="UniformToFill"/>
+                                        </Border.Background>
+                                        <Border Background="#99000000"
+                                                CornerRadius="7"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Row content -->
+                                <Grid Margin="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="62"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="47"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Album cover or music placeholder -->
+                                    <Grid Grid.Column="0"
+                                          Width="32"
+                                          Height="32"
+                                          VerticalAlignment="Center">
+
+                                        <Border x:Name="ArtMask"
+                                                Background="#454545"
+                                                CornerRadius="5"/>
+
+                                        <Grid>
+                                            <Grid.OpacityMask>
+                                                <VisualBrush Visual="{Binding ElementName=ArtMask}"/>
+                                            </Grid.OpacityMask>
+
+                                            <TextBlock Text="♫"
+                                                       FontSize="28"
+                                                       Foreground="#BBBBBB"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+
+                                            <Image Source="{Binding AlbumArt}"
+                                                   Stretch="UniformToFill"/>
+                                        </Grid>
+                                    </Grid>
+
+                                    <!-- Track title, artist and album -->
+                                    <StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Margin="7,0,3,0">
+
+                                        <TextBlock Text="{Binding Title}"
+                                                   Foreground="#FFFFFF"
+                                                   FontSize="14"
+                                                   TextTrimming="CharacterEllipsis"/>
+
+                                        <TextBlock Text="{Binding Artist}"
+                                                   Foreground="#B8B8B8"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"/>
+
+                                        <TextBlock Text="{Binding Album}"
+                                                   Foreground="#8F8F8F"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <!-- Duration; replaced by the delete button on hover -->
+                                    <Grid Grid.Column="2">
+                                        <TextBlock x:Name="DurationLabel"
+                                                   Text="{Binding DurationText}"
+                                                   Foreground="#5C5A5A"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"/>
+
+                                        <Button x:Name="DeleteButton"
+                                                Style="{StaticResource DeleteTrackButton}"
+                                                Click="DeleteTrack_Click"
+                                                ToolTip="Удалить из плейлиста"
+                                                Visibility="Collapsed"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,2,0"/>
+                                    </Grid>
+                                </Grid>
+                            
+                                    </Grid>
+</Grid>
+
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardRoot}"
+                                             Value="True">
+                                    <Setter TargetName="DurationLabel"
+                                            Property="Visibility"
+                                            Value="Collapsed"/>
+                                    <Setter TargetName="DeleteButton"
+                                            Property="Visibility"
+                                            Value="Visible"/>
+                                    <Setter TargetName="DeleteButton"
+                                            Property="Opacity"
+                                            Value="1"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- PLAYER -->
+            <StackPanel Grid.Row="1">
+
+                <!-- Previous / Play-Pause / Next -->
+                <UniformGrid Columns="5"
+                             HorizontalAlignment="Center"
+                             Width="270"
+                             Margin="0,0,0,0">
+
+                    <Button Click="ReversePlayback_Click"
+                            Style="{StaticResource TransportButton}"
+                            ToolTip="Воспроизведение в обратном порядке">
+                        <Image Source="/Images/flip.png"
+                               Width="20"
+                               Height="20"
+                               Stretch="Uniform"/>
+                    </Button>
+
+                    <Button Click="Previous_Click"
+                            Style="{StaticResource TransportButton}">
+                        <Image Source="/Images/back.png"
+                               Width="24"
+                               Height="24"
+                               Stretch="Uniform"/>
+                    </Button>
+
+                    <Button x:Name="PlayPauseButton"
+                            Click="PlayPause_Click"
+                            Style="{StaticResource TransportButton}"
+                            Width="32"
+                            Height="32"
+                            MinWidth="32"
+                            MinHeight="32">
+
+                        <Image x:Name="PlayPauseImage"
+                               Source="/Images/play.png"
+                               Width="32"
+                               Height="32"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    </Button>
+
+                    <Button Click="Next_Click"
+                            Style="{StaticResource TransportButton}">
+                        <Image Source="/Images/next.png"
+                               Width="24"
+                               Height="24"
+                               Stretch="Uniform"/>
+                    </Button>
+
+                    <Button x:Name="LoopButton"
+                            Click="Loop_Click"
+                            Style="{StaticResource TransportButton}"
+                            ToolTip="Повторять текущий трек">
+                        <Image Source="/Images/loop.png"
+                               Width="20"
+                               Height="20"
+                               Stretch="Uniform"/>
+                    </Button>
+
+                </UniformGrid>
+
+                <!-- Playback progress -->
+                <Slider x:Name="ProgressSlider"
+                        Style="{StaticResource RoundedSlider}"
+                        Minimum="0"
+                        Maximum="100"
+                        Value="0"
+                        Margin="0"
+                        PreviewMouseLeftButtonDown="Progress_MouseDown"
+                        PreviewMouseLeftButtonUp="Progress_MouseUp"
+                        ValueChanged="Progress_ValueChanged"/>
+
+                <Grid>
+                    <TextBlock x:Name="ElapsedText"
+                               Text="0:00"
+                               Foreground="#5C5A5A"
+                               FontSize="10"
+                               HorizontalAlignment="Left"/>
+
+                    <TextBlock x:Name="RemainingText"
+                               Text="-0:00"
+                               Foreground="#5C5A5A"
+                               FontSize="10"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+
+                <!-- Volume: click to jump, drag, or use the mouse wheel -->
+                <Slider x:Name="VolumeSlider"
+                        Style="{StaticResource RoundedSlider}"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="0.7"
+                        Width="145"
+                        HorizontalAlignment="Center"
+                        ValueChanged="Volume_ValueChanged"
+                        PreviewMouseLeftButtonDown="Volume_PreviewMouseLeftButtonDown"
+                        PreviewMouseMove="Volume_PreviewMouseMove"
+                        PreviewMouseLeftButtonUp="Volume_PreviewMouseLeftButtonUp"
+                        MouseWheel="Volume_MouseWheel"/>
+
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
