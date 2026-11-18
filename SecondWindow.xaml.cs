@@ -19,11 +19,17 @@ public partial class SecondWindow : Window
 
     public SecondWindow(MainWindow main)
     {
+        // The XAML can raise ValueChanged while InitializeComponent runs.
+        // Assign the owner and suppress slider callbacks before loading XAML.
+        _main = main ?? throw new ArgumentNullException(nameof(main));
+        _syncing = true;
+
         InitializeComponent();
-        _main = main;
+
         DataContext = main;
         ExpandedPlaylist.ItemsSource = main.Tracks;
         VolumeSlider.Value = main.CurrentVolume;
+        _syncing = false;
 
         _uiTimer.Interval = TimeSpan.FromMilliseconds(150);
         _uiTimer.Tick += (_, _) => RefreshPlayerState();
@@ -117,8 +123,11 @@ public partial class SecondWindow : Window
 
     private void Volume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_syncing)
-            _main.SetVolumeFromExpandedView(VolumeSlider.Value);
+        // Ignore initialization and any event raised before the window is ready.
+        if (_syncing || _main is null || VolumeSlider is null)
+            return;
+
+        _main.SetVolumeFromExpandedView(e.NewValue);
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)
