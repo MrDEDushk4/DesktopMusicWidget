@@ -69,12 +69,12 @@
     <Border Background="#202020" CornerRadius="22" Margin="7" ClipToBounds="True">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="47*"/>
-                <ColumnDefinition Width="53*"/>
+                <ColumnDefinition x:Name="PlaylistColumn" Width="47*"/>
+                <ColumnDefinition x:Name="PlayerColumn" Width="53*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Playlist -->
-            <Border Grid.Column="0" Background="#202020" Padding="12,12,8,12">
+            <Border x:Name="PlaylistPanel" Grid.Column="0" Background="#202020" Padding="12,12,8,12">
                 <ListBox x:Name="ExpandedPlaylist"
                          ItemsSource="{Binding Tracks}"
                          Background="Transparent"
@@ -109,7 +109,7 @@
             </Border>
 
             <!-- Player panel -->
-            <Border Grid.Column="1" CornerRadius="20" Margin="0,0,0,0" ClipToBounds="True">
+            <Border x:Name="PlayerPanel" Grid.Column="1" Grid.ColumnSpan="1" CornerRadius="20" Margin="0,0,0,0" ClipToBounds="True">
                 <Grid>
                     <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="0.22">
                         <Image.Effect>
@@ -130,6 +130,10 @@
                             <Button Content="⚙" Click="Settings_Click" HorizontalAlignment="Right"
                                     Foreground="#777777" Background="Transparent" BorderThickness="0"
                                     FontSize="22" ToolTip="Настройки виджета"/>
+                            <Button x:Name="PlaylistToggleButton" Content="☷" Click="TogglePlaylist_Click"
+                                    HorizontalAlignment="Right" Margin="0,0,42,0"
+                                    Foreground="#777777" Background="Transparent" BorderThickness="0"
+                                    FontSize="20" ToolTip="Скрыть плейлист"/>
                             <Button Content="×" Click="SwitchToCompact_Click" HorizontalAlignment="Left"
                                     Foreground="#888888" Background="Transparent" BorderThickness="0"
                                     FontSize="20" ToolTip="Вернуться к компактному интерфейсу"/>
