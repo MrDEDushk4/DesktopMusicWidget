@@ -202,6 +202,10 @@ public partial class MainWindow : Window
             return;
 
         _secondWindow = null;
+
+        if (_isClosing)
+            return;
+
         _widgetSettings.LastUsedView = "Compact";
         WidgetSettingsStore.Save(_widgetSettings);
         Show();
