@@ -480,6 +480,17 @@
 
             <!-- PLAYER -->
             <StackPanel Grid.Row="1">
+                <Button Content="РАСШИРЕННЫЙ ИНТЕРФЕЙС  ↗"
+                        Click="SwitchToSecond_Click"
+                        HorizontalAlignment="Right"
+                        Margin="0,0,2,5"
+                        Padding="7,2"
+                        FontSize="9"
+                        Foreground="#A7A7A7"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Переключиться на расширенный интерфейс"/>
 
                 <!-- Previous / Play-Pause / Next -->
                 <UniformGrid Columns="5"

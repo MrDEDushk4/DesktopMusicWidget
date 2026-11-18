@@ -134,6 +134,8 @@ public partial class MainWindow : Window
     private IntPtr _hwnd = IntPtr.Zero;
     private bool _isMoveMode;
     private bool _isClosing;
+    private SecondWindow? _secondWindow;
+    private readonly WidgetSettings _widgetSettings = WidgetSettingsStore.Load();
     private bool _liftedAboveDesktop;
     private readonly DispatcherTimer _desktopGuardTimer = new(DispatcherPriority.Background);
 
@@ -161,6 +163,54 @@ public partial class MainWindow : Window
     private string PlaylistSettingsPath => Path.Combine(SettingsDirectory, "playlist.json");
 
     public ObservableCollection<TrackItem> Tracks { get; } = new();
+
+    public MediaPlayer SharedPlayer => _player;
+    public int CurrentIndex => _currentIndex;
+    public bool IsPlaying => _isPlaying;
+    public TimeSpan CurrentDuration => _duration;
+    public bool ReversePlayback => _reversePlayback;
+    public bool RepeatCurrentTrack => _repeatCurrentTrack;
+    public double CurrentVolume => _player.Volume;
+
+    public void PlayFromExpandedView(int index) => PlayIndex(index);
+    public void TogglePlaybackFromExpandedView() => PlayPause_Click(this, new RoutedEventArgs());
+    public void PreviousFromExpandedView() => Previous_Click(this, new RoutedEventArgs());
+    public void NextFromExpandedView() => Next_Click(this, new RoutedEventArgs());
+    public void ToggleDirectionFromExpandedView() => ReversePlayback_Click(this, new RoutedEventArgs());
+    public void ToggleRepeatFromExpandedView() => Loop_Click(this, new RoutedEventArgs());
+
+    public void SeekFromExpandedView(double seconds)
+    {
+        if (_duration > TimeSpan.Zero)
+            _player.Position = TimeSpan.FromSeconds(Math.Clamp(seconds, 0, _duration.TotalSeconds));
+    }
+
+    public void SetVolumeFromExpandedView(double volume)
+    {
+        double normalized = Math.Clamp(volume, 0, 1);
+        _player.Volume = normalized;
+        if (VolumeSlider != null)
+            VolumeSlider.Value = normalized;
+        SaveVolume();
+    }
+
+    public static string FormatTrackTime(TimeSpan time) => FormatTime(time);
+
+    public void ReturnFromExpandedView(SecondWindow window)
+    {
+        if (!ReferenceEquals(_secondWindow, window))
+            return;
+
+        _secondWindow = null;
+
+        if (_isClosing)
+            return;
+
+        _widgetSettings.LastUsedView = "Compact";
+        WidgetSettingsStore.Save(_widgetSettings);
+        Show();
+        Activate();
+    }
 
     public MainWindow()
     {
@@ -353,6 +403,31 @@ public partial class MainWindow : Window
             Top = area.Top + (area.Height - ActualHeight) / 2;
         }
         SendToBottom();
+
+        if (string.Equals(_widgetSettings.LastUsedView, "Expanded", StringComparison.OrdinalIgnoreCase))
+            Dispatcher.BeginInvoke(new Action(SwitchToSecond), DispatcherPriority.ApplicationIdle);
+    }
+
+    private void SwitchToSecond_Click(object sender, RoutedEventArgs e) => SwitchToSecond();
+
+    private void SwitchToSecond()
+    {
+        if (_secondWindow != null)
+        {
+            _secondWindow.Activate();
+            return;
+        }
+
+        _widgetSettings.LastUsedView = "Expanded";
+        WidgetSettingsStore.Save(_widgetSettings);
+
+        _secondWindow = new SecondWindow(this)
+        {
+            Left = Left,
+            Top = Top
+        };
+        Hide();
+        _secondWindow.Show();
     }
 
     private static WidgetPosition? LoadPosition()
@@ -1097,6 +1172,7 @@ public partial class MainWindow : Window
     protected override void OnClosing(CancelEventArgs e)
     {
         _isClosing = true;
+        _secondWindow?.Close();
         _desktopGuardTimer.Stop();
         SaveVolume();
         SavePlaylist();
