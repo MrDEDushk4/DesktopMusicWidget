@@ -16,6 +16,7 @@ public partial class SecondWindow : Window
     private bool _syncing;
     private bool _seeking;
     private bool _returning;
+    private bool _playlistVisible = true;
 
     public SecondWindow(MainWindow main)
     {
@@ -138,6 +139,30 @@ public partial class SecondWindow : Window
     }
 
     private void SwitchToCompact_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void TogglePlaylist_Click(object sender, RoutedEventArgs e)
+    {
+        _playlistVisible = !_playlistVisible;
+
+        if (_playlistVisible)
+        {
+            PlaylistPanel.Visibility = Visibility.Visible;
+            PlaylistColumn.Width = new GridLength(47, GridUnitType.Star);
+            PlayerColumn.Width = new GridLength(53, GridUnitType.Star);
+            PlayerPanel.SetValue(Grid.ColumnProperty, 1);
+            PlayerPanel.SetValue(Grid.ColumnSpanProperty, 1);
+            PlaylistToggleButton.ToolTip = "Скрыть плейлист";
+        }
+        else
+        {
+            PlaylistPanel.Visibility = Visibility.Collapsed;
+            PlaylistColumn.Width = new GridLength(0);
+            PlayerColumn.Width = new GridLength(1, GridUnitType.Star);
+            PlayerPanel.SetValue(Grid.ColumnProperty, 0);
+            PlayerPanel.SetValue(Grid.ColumnSpanProperty, 2);
+            PlaylistToggleButton.ToolTip = "Показать плейлист";
+        }
+    }
 
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
