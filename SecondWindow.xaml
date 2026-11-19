@@ -51,7 +51,7 @@
                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
                         <Border x:Name="ItemBorder" CornerRadius="7" ClipToBounds="True" Background="#202020">
                             <Grid Height="43">
-                                <Image Source="{Binding AlbumArt}" Stretch="UniformToFill" Opacity="0.0">
+                                <Image x:Name="ItemBackdrop" Source="{Binding AlbumArt}" Stretch="UniformToFill" Opacity="0.0">
                                     <Image.Effect>
                                         <BlurEffect Radius="12"/>
                                     </Image.Effect>
@@ -62,9 +62,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBackdrop" Property="Opacity" Value="0.20"/>
                                 <Setter TargetName="ItemShade" Property="Background" Value="#AA383838"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBackdrop" Property="Opacity" Value="0.42"/>
                                 <Setter TargetName="ItemShade" Property="Background" Value="#A8202020"/>
                                 <Setter Property="Opacity" Value="1"/>
                             </Trigger>
