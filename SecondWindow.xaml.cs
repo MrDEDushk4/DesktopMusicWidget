@@ -15,7 +15,6 @@ public partial class SecondWindow : Window
     private const double PlayerWidth = 250;
     private const double PlayerHeight = 190;
     private const double PlaylistWidth = 260;
-    private const double Overlap = 10;
     private const double PlaylistPanelWidth = PlaylistWidth + Overlap;
     private const double OpenWindowWidth = PlaylistWidth + PlayerWidth;
     private const double PlaylistStart = -PlaylistPanelWidth;
@@ -222,10 +221,7 @@ public partial class SecondWindow : Window
             completed?.Invoke();
         };
 
-        element.BeginAnimation(
-            Canvas.LeftProperty,
-            animation,
-            HandoffBehavior.SnapshotAndReplace);
+        element.BeginAnimation(Canvas.LeftProperty, animation);
     }
 
     private void ExpandedPlaylist_SelectionChanged(
