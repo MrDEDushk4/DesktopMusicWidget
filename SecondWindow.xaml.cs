@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
@@ -11,11 +12,13 @@ namespace DesktopMusicWidget;
 
 public partial class SecondWindow : Window
 {
-    private const double PlayerWidth = 234;
-    private const double PlaylistWidth = 244;
+    private const double PlayerWidth = 250;
+    private const double PlayerHeight = 190;
+    private const double PlaylistWidth = 260;
     private const double Overlap = 10;
+    private const double PlaylistPanelWidth = PlaylistWidth + Overlap;
     private const double OpenWindowWidth = PlaylistWidth + PlayerWidth;
-    private const double PlaylistStart = -(PlaylistWidth + Overlap);
+    private const double PlaylistStart = -PlaylistPanelWidth;
     private const double PlayerOpenLeft = PlaylistWidth;
 
     private readonly MainWindow _main;
@@ -41,6 +44,7 @@ public partial class SecondWindow : Window
 
         _uiTimer.Interval = TimeSpan.FromMilliseconds(150);
         _uiTimer.Tick += (_, _) => RefreshPlayerState();
+
         _syncing = false;
         _uiTimer.Start();
         RefreshPlayerState();
@@ -49,10 +53,13 @@ public partial class SecondWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         _compactLeft = Left;
+
         Width = PlayerWidth;
-        Height = 179;
+        Height = PlayerHeight;
+
         RootCanvas.Width = OpenWindowWidth;
-        RootCanvas.Height = 179;
+        RootCanvas.Height = PlayerHeight;
+
         Canvas.SetLeft(PlayerPanel, 0);
         Canvas.SetLeft(PlaylistPanel, PlaylistStart);
         PlaylistPanel.Visibility = Visibility.Collapsed;
@@ -74,13 +81,17 @@ public partial class SecondWindow : Window
         if (index >= 0 && index < _main.Tracks.Count)
         {
             TrackItem track = _main.Tracks[index];
+
             TrackTitle.Text = track.Title;
+
             string artist = string.IsNullOrWhiteSpace(track.Artist)
                 ? "Неизвестный исполнитель"
                 : track.Artist;
+
             string album = string.IsNullOrWhiteSpace(track.Album)
                 ? "Без альбома"
                 : track.Album;
+
             TrackArtist.Text = artist + " · " + album;
 
             CoverImage.Source = track.AlbumArt;
@@ -110,7 +121,8 @@ public partial class SecondWindow : Window
         if (!_seeking)
         {
             PositionSlider.Maximum = Math.Max(1, duration.TotalSeconds);
-            PositionSlider.Value = Math.Clamp(position.TotalSeconds, 0, PositionSlider.Maximum);
+            PositionSlider.Value = Math.Clamp(
+                position.TotalSeconds, 0, PositionSlider.Maximum);
         }
 
         ElapsedLabel.Text = MainWindow.FormatTrackTime(position);
@@ -133,74 +145,92 @@ public partial class SecondWindow : Window
 
     private void OpenPlaylist()
     {
+        if (_animating || _playlistVisible)
+            return;
+
         _animating = true;
         _playlistVisible = true;
         PlaylistPanel.Visibility = Visibility.Visible;
         PlaylistToggleButton.ToolTip = "Закрыть плейлист";
 
-        AnimateDouble(this, LeftProperty, Left, _compactLeft - PlaylistWidth, null);
-        AnimateDouble(this, WidthProperty, Width, OpenWindowWidth, null);
-        AnimateCanvas(PlaylistPanel, PlaylistStart, 0, null);
-        AnimateCanvas(PlayerPanel, 0, PlayerOpenLeft, () =>
+        // Расширяем окно и переносим его левую границу вместе с плеером.
+        // Экранная координата PlayerPanel остаётся прежней:
+        // Window.Left + Canvas.Left(PlayerPanel) == _compactLeft.
+        Width = OpenWindowWidth;
+        Canvas.SetLeft(PlayerPanel, PlayerOpenLeft);
+        Left = _compactLeft - PlaylistWidth;
+
+        AnimateCanvas(PlaylistPanel, PlaylistStart, 0, () =>
         {
             _animating = false;
-            Left = _compactLeft - PlaylistWidth;
-            Width = OpenWindowWidth;
             Canvas.SetLeft(PlaylistPanel, 0);
-            Canvas.SetLeft(PlayerPanel, PlayerOpenLeft);
         });
     }
 
     private void ClosePlaylist()
     {
+        if (_animating || !_playlistVisible)
+            return;
+
         _animating = true;
         PlaylistToggleButton.ToolTip = "Открыть плейлист";
 
-        AnimateDouble(this, LeftProperty, Left, _compactLeft, null);
-        AnimateDouble(this, WidthProperty, Width, PlayerWidth, null);
-        AnimateCanvas(PlaylistPanel, 0, PlaylistStart, null);
-        AnimateCanvas(PlayerPanel, PlayerOpenLeft, 0, () =>
+        // Плеер остаётся неподвижным. Закрывается только панель плейлиста.
+        AnimateCanvas(PlaylistPanel, 0, PlaylistStart, () =>
         {
-            _playlistVisible = false;
-            _animating = false;
             PlaylistPanel.Visibility = Visibility.Collapsed;
 
+            // Одновременное изменение координат и размера выполняется
+            // в одном UI-проходе: экранное положение плеера не меняется.
+            Canvas.SetLeft(PlayerPanel, 0);
             Left = _compactLeft;
             Width = PlayerWidth;
             Canvas.SetLeft(PlaylistPanel, PlaylistStart);
-            Canvas.SetLeft(PlayerPanel, 0);
+
+            _playlistVisible = false;
+            _animating = false;
         });
     }
 
-    private static void AnimateDouble(DependencyObject target, DependencyProperty property,
-        double from, double to, Action? completed)
-    {
-        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(280))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
-        };
-
-        if (completed != null)
-            animation.Completed += (_, _) => completed();
-
-        target.BeginAnimation(property, animation);
-    }
-
-    private static void AnimateCanvas(FrameworkElement element, double from, double to,
+    private static void AnimateCanvas(
+        FrameworkElement element,
+        double from,
+        double to,
         Action? completed)
     {
-        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(280))
+        // Удаляем предыдущую анимацию, чтобы не накапливались clocks
+        // и итоговое значение не зависело от старой анимации.
+        element.BeginAnimation(Canvas.LeftProperty, null);
+        Canvas.SetLeft(element, from);
+
+        var animation = new DoubleAnimation(
+            from,
+            to,
+            TimeSpan.FromMilliseconds(300))
         {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = new CubicEase
+            {
+                EasingMode = EasingMode.EaseInOut
+            },
+            FillBehavior = FillBehavior.Stop
         };
 
-        if (completed != null)
-            animation.Completed += (_, _) => completed();
+        animation.Completed += (_, _) =>
+        {
+            element.BeginAnimation(Canvas.LeftProperty, null);
+            Canvas.SetLeft(element, to);
+            completed?.Invoke();
+        };
 
-        element.BeginAnimation(Canvas.LeftProperty, animation);
+        element.BeginAnimation(
+            Canvas.LeftProperty,
+            animation,
+            HandoffBehavior.SnapshotAndReplace);
     }
 
-    private void ExpandedPlaylist_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ExpandedPlaylist_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
     {
         if (_syncing || ExpandedPlaylist.SelectedIndex < 0)
             return;
@@ -233,21 +263,28 @@ public partial class SecondWindow : Window
         _seeking = false;
     }
 
-    private void Position_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void Position_ValueChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<double> e)
     {
         if (!_seeking || _main.CurrentDuration <= TimeSpan.Zero)
             return;
 
         TimeSpan position = TimeSpan.FromSeconds(e.NewValue);
         ElapsedLabel.Text = MainWindow.FormatTrackTime(position);
+
         TimeSpan remaining = _main.CurrentDuration - position;
         RemainingLabel.Text = "-" + MainWindow.FormatTrackTime(
             remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
     }
 
-    private void Volume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void Volume_ValueChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_syncing || _main is null || VolumeSlider is null)
+        // Событие может сработать во время InitializeComponent,
+        // пока элементы окна ещё не полностью инициализированы.
+        if (_syncing || !IsInitialized || _main is null)
             return;
 
         _main.SetVolumeFromExpandedView(e.NewValue);
@@ -255,12 +292,17 @@ public partial class SecondWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(this,
+        MessageBox.Show(
+            this,
             "Настройки виджета будут доступны здесь.",
-            "Настройки", MessageBoxButton.OK, MessageBoxImage.Information);
+            "Настройки",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
-    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void Window_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
     {
         if (e.ButtonState != MouseButtonState.Pressed ||
             IsInteractiveElement(e.OriginalSource as DependencyObject))
@@ -269,11 +311,13 @@ public partial class SecondWindow : Window
         try
         {
             DragMove();
-            _compactLeft = _playlistVisible ? Left + PlaylistWidth : Left;
+            _compactLeft = _playlistVisible
+                ? Left + PlaylistWidth
+                : Left;
         }
         catch (InvalidOperationException)
         {
-            // The window can lose the mouse capture during a drag.
+            // Окно могло потерять захват мыши во время перетаскивания.
         }
     }
 
@@ -284,13 +328,14 @@ public partial class SecondWindow : Window
             if (element is Button or Slider or ListBox or ScrollBar or TextBox)
                 return true;
 
-            element = System.Windows.Media.VisualTreeHelper.GetParent(element);
+            element = VisualTreeHelper.GetParent(element);
         }
 
         return false;
     }
 
-    private void SwitchToCompact_Click(object sender, RoutedEventArgs e) => Close();
+    private void SwitchToCompact_Click(object sender, RoutedEventArgs e) =>
+        Close();
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
